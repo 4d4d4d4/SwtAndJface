@@ -12,6 +12,9 @@
 
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+      <maven.compiler.source>17</maven.compiler.source>
+      <maven.compiler.target>17</maven.compiler.target>
+
   </properties>
 
 
@@ -35,50 +38,6 @@
       <version>3.8.1</version>
       <scope>test</scope>
     </dependency>
-
-<!--    &lt;!&ndash; 导入swt &ndash;&gt;-->
-<!--    <dependency>-->
-<!--      <groupId>org.eclipse.swt</groupId>-->
-<!--      <artifactId>swt.win32.win32.x86_64</artifactId>-->
-<!--      <version>3.125.0.v20240227-1638</version>-->
-<!--      <scope>system</scope>-->
-<!--      <systemPath>${project.basedir}/src/main/resources/org.eclipse.swt.win32.win32.x86_64_3.125.0.v20240227-1638.jar</systemPath>-->
-<!--    </dependency>-->
-
-
-<!--    &lt;!&ndash; 导入jface &ndash;&gt;-->
-<!--    <dependency>-->
-<!--      <groupId>org.eclipse.jface</groupId>-->
-<!--      <artifactId>jface</artifactId>-->
-<!--      <version>3.33.0.v20240214-1640</version>-->
-<!--      <scope>system</scope>-->
-<!--      <systemPath>${project.basedir}/src/main/resources/org.eclipse.jface_3.33.0.v20240214-1640.jar</systemPath>-->
-<!--    </dependency>-->
-
-<!--&lt;!&ndash;    <dependency>&ndash;&gt;-->
-<!--&lt;!&ndash;      <groupId>org.eclipse.core</groupId>&ndash;&gt;-->
-<!--&lt;!&ndash;      <artifactId>runtime</artifactId>&ndash;&gt;-->
-<!--&lt;!&ndash;      <version>source_3.31.0.v20240215-1631</version>&ndash;&gt;-->
-<!--&lt;!&ndash;      <scope>system</scope>&ndash;&gt;-->
-<!--&lt;!&ndash;      <systemPath>${project.basedir}/src/main/resources/org.eclipse.core.runtime.source_3.31.0.v20240215-1631.jar</systemPath>&ndash;&gt;-->
-<!--&lt;!&ndash;    </dependency>&ndash;&gt;-->
-
-<!--    <dependency>-->
-<!--      <groupId>org.eclipse.equinox</groupId>-->
-<!--      <artifactId>common</artifactId>-->
-<!--      <version>source_3.31.0.v20240215-1631</version>-->
-<!--      <scope>system</scope>-->
-<!--      <systemPath>${project.basedir}/src/main/resources/org.eclipse.equinox.common.source_3.19.0.v20240214-0846.jar</systemPath>-->
-<!--    </dependency>-->
-
-
-<!--&lt;!&ndash;    <dependency>&ndash;&gt;-->
-<!--&lt;!&ndash;      <groupId>org.eclipse.core</groupId>&ndash;&gt;-->
-<!--&lt;!&ndash;      <artifactId>commands</artifactId>&ndash;&gt;-->
-<!--&lt;!&ndash;      <version>source_3.31.0.v20240215-1631</version>&ndash;&gt;-->
-<!--&lt;!&ndash;      <scope>system</scope>&ndash;&gt;-->
-<!--&lt;!&ndash;      <systemPath>${project.basedir}/src/main/resources/org.eclipse.core.commands.source_3.12.0.v20240214-1640.jar</systemPath>&ndash;&gt;-->
-<!--&lt;!&ndash;    </dependency>&ndash;&gt;-->
   </dependencies>
 
 </project>
