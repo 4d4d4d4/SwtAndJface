@@ -9,6 +9,10 @@ import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.*;
 
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.ServerSocket;
+
 
 /**
  * @Classname ServerUI
@@ -21,11 +25,10 @@ public class ServerUI extends Shell {
     private static final Display display = Display.getDefault();
     private final Composite showTextComposite = new Composite(this, SWT.NONE); // 显示消息面板
     private final Composite editTextComposite = new Composite(this, SWT.NONE); // 发送消息面板
-
-    @Override
-    protected void checkSubclass() {
-
-    }
+    private ServerSocket serverSocket; // 服务端开放套接字
+    private Integer msgPort = 8848; // 开放chat端口 8848钛合金
+    private ObjectInputStream objISMsg; // 发送消息流
+    private ObjectOutputStream objOSMsg; // 接收消息流
 
     public ServerUI() {
         super(display);
@@ -125,6 +128,11 @@ public class ServerUI extends Shell {
         showText.setLayoutData(gridData1);
     }
 
+
+    @Override
+    protected void checkSubclass() {
+
+    }
 
     public static void main(String[] args) {
         ServerUI serverUI = new ServerUI();
