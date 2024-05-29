@@ -1,8 +1,8 @@
 package org.coffee_remote_control;
 
+import org.apache.lucene.document.Field;
 import org.eclipse.jface.dialogs.InputDialog;
 import org.eclipse.jface.dialogs.MessageDialog;
-import org.eclipse.jface.resource.ImageDescriptor;
 import org.eclipse.jface.window.Window;
 import org.eclipse.swt.SWT;
 import org.eclipse.swt.custom.CTabFolder;
@@ -16,6 +16,12 @@ import org.eclipse.swt.layout.GridData;
 import org.eclipse.swt.layout.GridLayout;
 import org.eclipse.swt.widgets.*;
 
+import java.io.File;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -37,8 +43,14 @@ public class ClientUI extends Shell {
     private Composite ctabComposite = null; // 选项卡面板
     private Composite remoteComposite = null; // 远程连接面板
     private String serverIp = null; // 服务器ip地址
-    private String serverPort = null; // 服务器端口
+    private Integer serverPort = null; // 服务器端口
+    private Integer filePort =  5433; // 文件传输端口 固定的
     private CTabFolder CTab; // 选项卡
+    private Socket socket; // 套接字
+    private Text showText; // 展示消息框
+    private  Text editTexts = null; // 发送消息框
+    private ObjectInputStream objISMsg;  // 输入流
+    private ObjectOutputStream objOSMsg; // 输出流
 
     public ClientUI() {
         super(display);
@@ -64,11 +76,14 @@ public class ClientUI extends Shell {
         Matcher matcher = pattern.matcher(address);
         if (!matcher.find()) {
             MessageDialog.openInformation(this, "信息提示", "提交失败 信息项不能为空");
-            new ClientUI();
+//            new ClientUI();
             return;
         }
+
         serverIp = matcher.group(1);
-        serverPort = matcher.group(2);
+        serverPort = Integer.valueOf(matcher.group(2));
+        // 连接服务器
+        connectServer(serverIp, serverPort);
 
         // 初始化选项卡面板
         ctabComposite = new Composite(this, SWT.NONE);
@@ -100,6 +115,19 @@ public class ClientUI extends Shell {
         }
     }
 
+    private void connectServer(String serverIp, Integer serverPort) {
+        try {
+            System.out.println(serverIp + ":" + serverPort);
+            socket = new Socket(serverIp, serverPort);
+            new RecThread(socket).start();
+        } catch (IOException e) {
+            System.out.println("服务器套接字连接失败");
+            MessageDialog.openInformation(this, "连接失败", "请确认url输入正确|请确认服务器开放");
+//            new ClientUI();
+            throw new RuntimeException(e);
+        }
+    }
+
     // 创建消息聊天选项卡
     private void createMessageTab() {
         chatComposite = new Composite(CTab, SWT.NONE);
@@ -111,14 +139,6 @@ public class ClientUI extends Shell {
 
         initShowText(chatComposite);
         initEditText(chatComposite);
-
-
-        message.addListener(SWT.Selection, new Listener() {
-            @Override
-            public void handleEvent(Event event) {
-                System.out.println("我被电击了");
-            }
-        });
 
         CTab.setSelection(message);
     }
@@ -142,7 +162,7 @@ public class ClientUI extends Shell {
         textTitle.setText("消息框：");
         textTitle.setFont(heitFont);
 
-        Text showText = new Text(showTextComposite, SWT.MULTI | SWT.BORDER | SWT.WRAP | SWT.V_SCROLL);
+        showText = new Text(showTextComposite, SWT.MULTI | SWT.BORDER | SWT.WRAP | SWT.V_SCROLL);
         showText.setBackground(display.getSystemColor(SWT.COLOR_WHITE));
         showText.setEnabled(false);
         GridData gridData1 = new GridData();
@@ -170,15 +190,15 @@ public class ClientUI extends Shell {
         textTitle.setText("编辑框：");
         textTitle.setFont(heitFont);
 
-        Text editText = new Text(editTextComposite, SWT.MULTI | SWT.BORDER | SWT.WRAP); // 多行 有线条 换行
-        editText.setTextLimit(150);
-        editText.setBackground(display.getSystemColor(SWT.COLOR_WHITE)); // 设置颜色白色
+        editTexts = new Text(editTextComposite, SWT.MULTI | SWT.BORDER | SWT.WRAP); // 多行 有线条 换行
+        editTexts.setTextLimit(150);
+        editTexts.setBackground(display.getSystemColor(SWT.COLOR_WHITE)); // 设置颜色白色
         GridData gridData1 = new GridData();
         gridData1.horizontalAlignment = SWT.FILL;
         gridData1.verticalAlignment = SWT.FILL;
         gridData1.grabExcessHorizontalSpace = true;
         gridData1.grabExcessVerticalSpace = true;
-        editText.setLayoutData(gridData1);
+        editTexts.setLayoutData(gridData1);
 
         Button button = new Button(editTextComposite, SWT.NONE);
         button.setText("发送");
@@ -191,9 +211,32 @@ public class ClientUI extends Shell {
         button.addSelectionListener(new SelectionAdapter() {
             @Override
             public void widgetSelected(SelectionEvent e) {
-                System.out.println("发送了消息");
+
+                sendMsg(editTexts.getText());
             }
         });
+    }
+
+    private void sendMsg(String text) {
+        if (objOSMsg == null) {
+            return;
+        }
+
+        String sendText = "khd##" + text;
+        byte[] bytes = sendText.getBytes(StandardCharsets.UTF_8);
+        try {
+            objOSMsg.writeObject(bytes);
+            objOSMsg.flush();
+            Display.getDefault().asyncExec(() -> {
+                showText.append("我说：" + text + "\n");
+                showText.setOrientation(showText.getText().length());
+                editTexts.setText("");
+                editTexts.getParent().layout();  // 强制刷新布局
+            });
+        } catch (IOException e) {
+            System.out.println("客户端消息发送失败" + e.getMessage());
+            throw new RuntimeException(e);
+        }
     }
 
     // 创建文件传输选项卡
@@ -237,11 +280,21 @@ public class ClientUI extends Shell {
                         "potoshopg 格式(*.psd)", "文本格式(*.txt)"});
                 OpenFileDialog.setFilterPath("C:\\");
                 String open = OpenFileDialog.open(); // 获取文件路径
-                System.out.println(open);
+                if(null == open) {
+                    return;
+                }
+                try {
+                    File source = new File(open);
+                    ClientFileSocket clientFileSocket = new ClientFileSocket(serverIp, filePort);
+                    clientFileSocket.sendFile(source);
+                } catch (IOException ex) {
+                    throw new RuntimeException(ex);
+                }
+                MessageDialog.openInformation(getShell(), "文件传输助手", "文件传输成功");
             }
         });
         // 延续聊天的对话框
-        initEditText(fileComposite);
+//        initEditText(fileComposite);
     }
 
     // 创建远程控制选项卡
@@ -258,25 +311,24 @@ public class ClientUI extends Shell {
         gridData.grabExcessHorizontalSpace = true;
         gridData.grabExcessVerticalSpace = true;
         remoteComposite.setLayoutData(gridData);
-        // remoteComposite.setBackground(display.getSystemColor(SWT.COLOR_RED));
         ImageLoader loader = new ImageLoader();
         ImageData[] load = loader.load("F:\\壁纸\\idea壁纸.jpg");
         Image newImage = new Image(null, load[0]);
         // 图片适配
-        remoteComposite.addPaintListener( new PaintListener() {
+        remoteComposite.addPaintListener(new PaintListener() {
             @Override
             public void paintControl(PaintEvent e) {
                 int compositeWidth = remoteComposite.getBounds().width;
                 int compositeHeight = remoteComposite.getBounds().height;
 
                 // 计算图片的缩放比例
-                float scaleX = (float)compositeWidth / newImage.getBounds().width;
-                float scaleY = (float)compositeHeight / newImage.getBounds().height;
+                float scaleX = (float) compositeWidth / newImage.getBounds().width;
+                float scaleY = (float) compositeHeight / newImage.getBounds().height;
                 float scale = Math.min(scaleX, scaleY); // 选择较小的比例以保持图片宽高比
 
                 // 计算缩放后的图片尺寸
-                int scaledWidth = (int)(newImage.getBounds().width * scale);
-                int scaledHeight = (int)(newImage.getBounds().height * scale);
+                int scaledWidth = (int) (newImage.getBounds().width * scale);
+                int scaledHeight = (int) (newImage.getBounds().height * scale);
 
                 // 绘制缩放后的图片
                 e.gc.drawImage(newImage, 0, 0, newImage.getBounds().width, newImage.getBounds().height,
@@ -293,6 +345,39 @@ public class ClientUI extends Shell {
     protected void checkSubclass() {
     }
 
+
+    private class RecThread extends Thread {
+        @Override
+        public void run() {
+            System.out.println("等待服务端发送消息");
+            while (true) {
+                try {
+                    byte[] data = (byte[]) objISMsg.readObject();
+                    String message = new String(data);
+                    String[] split = message.split("##"); // kfd##输入的消息
+                    Display display = Display.getDefault(); // 获取当前Display实例
+                    display.asyncExec(() -> {
+                        if (split.length >1 && message.startsWith("fwd")) {
+                            showText.append("服务端说：" + split[1] + "\n");
+                        }
+                        showText.setOrientation(showText.getText().length());
+                    });
+                } catch (IOException | ClassNotFoundException e) {
+                    e.printStackTrace();
+                    throw new RuntimeException(e);
+                }
+            }
+        }
+
+        public RecThread(Socket socket) {
+            try {
+                objISMsg = new ObjectInputStream(socket.getInputStream());
+                objOSMsg = new ObjectOutputStream(socket.getOutputStream());
+            } catch (IOException e) {
+                throw new RuntimeException(e);
+            }
+        }
+    }
     public static void main(String[] args) {
         new ClientUI();
     }
